@@ -1094,17 +1094,14 @@ async function fetchSentinelAgent() {
 
 async function fetchLLMOrch() {
   try {
-    // Usar proxy del Sentinel-Agent para evitar CORS
-    const baseUrl = APIS.sentinel_agent || window.location.origin;
-    const r = await fetch(baseUrl + '/proxy/orchestrator', {
+    const r = await fetch('/proxy/orchestrator', {
       signal: AbortSignal.timeout(5000)
     });
     const s = await r.json();
-    if (s.error && !s.phi_global) throw new Error(s.error);
     setPill('pill-orch', true);
-    const phi = s.phi_global || s.phi || 0;
+    const phi = s.phi_global || 0;
     document.getElementById('g-phi').textContent =
-      'orch phi=' + (phi > 0 ? phi.toFixed(3) : '—');
+      'orch phi=' + (phi > 0 ? phi.toFixed(3) : '--');
     document.getElementById('fw-mode').textContent =
       s.mode || 'MONITOR';
     return s;
