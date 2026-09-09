@@ -26,7 +26,28 @@ app = create_api(agent)
 
 # Serve dashboard HTML directly
 from flask import send_file, Response
+import json as _json
 import os as _os
+
+@app.route('/proxy/orchestrator')
+@app.route('/proxy/orchestrator/<path:subpath>')
+def proxy_orchestrator(subpath=''):
+    """Proxy para el Orchestrator — resuelve CORS entre dominios Railway."""
+    import urllib.request as _ur
+    orch_url = _os.environ.get('ORCH_URL',
+        'https://web-production-84ffe.up.railway.app')
+    url = orch_url + ('/' + subpath if subpath else '/')
+    try:
+        req = _ur.Request(url, headers={'User-Agent':'sentinel-proxy/1.0'})
+        with _ur.urlopen(req, timeout=4) as r:
+            data = r.read()
+        return Response(data, mimetype='application/json',
+                       headers={'Access-Control-Allow-Origin':'*'})
+    except Exception as e:
+        return Response(
+            _json.dumps({'error':str(e),'online':False}),
+            mimetype='application/json',
+            headers={'Access-Control-Allow-Origin':'*'})
 
 @app.route('/dashboard')
 def dashboard():

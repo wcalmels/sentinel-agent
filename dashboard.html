@@ -485,7 +485,7 @@ const APIS = {
   guard:         localStorage.getItem('guard-url')          || 'http://localhost:5052',
   firewall:      localStorage.getItem('firewall-url')       || 'http://localhost:5053',
   sentinel_agent:localStorage.getItem('sentinel-agent-url') || 'https://sentinel-agent-production-0577.up.railway.app',
-  llm_orch:      localStorage.getItem('llm-orch-url')       || 'https://web-production-84ffe.up.railway.app',
+  llm_orch:      localStorage.getItem('llm-orch-url')       || '',
 };
 
 // Populate config inputs
@@ -1094,8 +1094,13 @@ async function fetchSentinelAgent() {
 
 async function fetchLLMOrch() {
   try {
-    // TUCH Orchestrator usa / como health check
-    const s = await api('llm_orch', '/');
+    // Usar proxy del Sentinel-Agent para evitar CORS
+    const baseUrl = APIS.sentinel_agent || window.location.origin;
+    const r = await fetch(baseUrl + '/proxy/orchestrator', {
+      signal: AbortSignal.timeout(5000)
+    });
+    const s = await r.json();
+    if (s.error && !s.phi_global) throw new Error(s.error);
     setPill('pill-orch', true);
     const phi = s.phi_global || s.phi || 0;
     document.getElementById('g-phi').textContent =
