@@ -1094,13 +1094,14 @@ async function fetchSentinelAgent() {
 
 async function fetchLLMOrch() {
   try {
-    const s = await api('llm_orch', '/status');
+    // TUCH Orchestrator expone /health y /phi
+    const s = await api('llm_orch', '/health');
     setPill('pill-orch', true);
-    const eff = s.efficiency || {};
+    const phi = s.phi_global || s.phi || 0;
     document.getElementById('g-phi').textContent =
-      'L0:' + (eff.level_0||0) + ' L1:' + (eff.level_1||0) + ' LLM:' + (eff.level_2_llm||0);
+      'orch phi=' + (phi).toFixed(3);
     document.getElementById('fw-mode').textContent =
-      eff.target_met ? 'EFICIENTE' : 'NORMAL';
+      s.mode || (phi > 0.618 ? 'MONITOR' : 'DEGRADADO');
     return s;
   } catch(e) {
     setPill('pill-orch', false);
