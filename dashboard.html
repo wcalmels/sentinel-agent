@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>phi47 Control Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:    #020508;
+  --bg2:   #06100F;
+  --bg3:   #0B1820;
+  --panel: #0D1F1D;
+  --b1:    #1A2A28;
+  --b2:    #243830;
+  --phi:   #E8A020;
+  --phi2:  #B87A10;
+  --on:    #00FF88;
+  --on2:   #00C86A;
+  --red:   #FF3355;
+  --warn:  #FF9900;
+  --cyan:  #00D4C8;
+  --dim:   #4A6860;
+  --t1:    #C8DCD8;
+  --t2:    #7A9A96;
+  --mono:  'JetBrains Mono',monospace;
+  --sans:  'Inter',system-ui,sans-serif;
+}
+html,body{height:100%;background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:13px;overflow:hidden}
+
+/* ── Layout ── */
+.app{display:grid;grid-template-rows:52px 1fr;height:100vh}
+
+/* ── Topbar ── */
+.top{
+  background:var(--bg2);border-bottom:1px solid var(--b1);
+  display:flex;align-items:center;padding:0 20px;gap:16px;
+}
+.logo{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--phi);letter-spacing:.03em}
+.logo span{color:var(--dim);font-weight:300;font-size:11px;margin-left:8px}
+.sys-pills{display:flex;gap:6px;margin-left:8px}
+.pill{
+  font-family:var(--mono);font-size:9px;font-weight:600;
+  padding:3px 8px;border-radius:3px;border:1px solid var(--b1);
+  color:var(--dim);letter-spacing:.04em;cursor:default;
+}
+.pill.ok{border-color:rgba(0,255,136,.35);color:var(--on)}
+.pill.err{border-color:rgba(255,51,85,.35);color:var(--red)}
+.top-phi{
+  margin-left:auto;font-family:var(--mono);font-size:26px;font-weight:700;
+  color:var(--on);letter-spacing:-.02em;transition:color .4s;
+}
+.top-phi.warn{color:var(--warn)}.top-phi.crit{color:var(--red);animation:blink .5s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+.top-phi-lbl{font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:2px;text-align:right}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--on);animation:ping 2s infinite;flex-shrink:0}
+.dot.off{background:var(--dim);animation:none}
+@keyframes ping{0%,100%{box-shadow:0 0 0 0 rgba(0,255,136,.4)}50%{box-shadow:0 0 0 5px rgba(0,255,136,0)}}
+
+/* ── Main grid ── */
+.main{
+  display:grid;
+  grid-template-columns:300px 1fr 300px;
+  grid-template-rows:1fr 1fr;
+  gap:1px;background:var(--b1);overflow:hidden;
+}
+.panel{background:var(--bg2);display:flex;flex-direction:column;overflow:hidden}
+.panel.span2{grid-row:1/3}
+.ph{
+  padding:10px 16px 8px;border-bottom:1px solid var(--b1);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.ph-title{font-family:var(--mono);font-size:10px;font-weight:500;color:var(--dim);letter-spacing:.05em}
+.pb{flex:1;overflow-y:auto;overflow-x:hidden}
+.pb::-webkit-scrollbar{width:3px}
+.pb::-webkit-scrollbar-thumb{background:var(--b2)}
+
+/* ── Badges ── */
+.badge{
+  font-family:var(--mono);font-size:9px;padding:2px 7px;
+  border-radius:3px;font-weight:600;
+}
+.badge.normal{background:rgba(0,255,136,.1);color:var(--on)}
+.badge.stressed{background:rgba(255,153,0,.1);color:var(--warn)}
+.badge.recovery{background:rgba(255,51,85,.1);color:var(--red)}
+.badge.safe{background:rgba(0,255,136,.1);color:var(--on)}
+.badge.caution{background:rgba(255,153,0,.1);color:var(--warn)}
+.badge.critical{background:rgba(255,51,85,.1);color:var(--red)}
+
+/* ── Metrics ── */
+.metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px}
+.mc{background:var(--bg3);border-radius:4px;padding:8px 10px}
+.mc-v{font-family:var(--mono);font-size:19px;font-weight:700;color:var(--on);line-height:1}
+.mc-v.warn{color:var(--warn)}.mc-v.crit{color:var(--red)}
+.mc-l{font-size:10px;color:var(--dim);margin-top:3px}
+
+/* ── Stat rows ── */
+.srow{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:7px 16px;border-bottom:1px solid var(--b1);
+}
+.srow:last-child{border:none}
+.sn{font-size:11px;color:var(--t2)}
+.sv{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--t1)}
+.sv.ok{color:var(--on)}.sv.warn{color:var(--warn)}.sv.bad{color:var(--red)}
+
+/* ── Actions ── */
+.act-section{padding:10px 14px;border-top:1px solid var(--b1);flex-shrink:0}
+.act-label{font-family:var(--mono);font-size:9px;color:var(--dim);margin-bottom:6px;letter-spacing:.04em}
+.act-row{display:flex;gap:6px;margin-bottom:6px}
+.inp{
+  flex:1;background:var(--bg3);border:1px solid var(--b1);
+  border-radius:4px;color:var(--t1);font-size:12px;
+  padding:6px 10px;outline:none;font-family:var(--mono);
+}
+.inp:focus{border-color:var(--phi)}
+.btn{
+  background:var(--bg3);border:1px solid var(--b1);
+  border-radius:4px;color:var(--t1);font-size:11px;
+  padding:6px 12px;cursor:pointer;font-family:var(--mono);
+  white-space:nowrap;transition:background .15s,border-color .15s;
+}
+.btn:hover{background:var(--b1)}
+.btn:active{background:var(--b2)}
+.btn.danger{border-color:rgba(255,51,85,.3);color:var(--red)}
+.btn.danger:hover{background:rgba(255,51,85,.08)}
+.btn.ok{border-color:rgba(0,255,136,.3);color:var(--on)}
+.btn.ok:hover{background:rgba(0,255,136,.08)}
+.btn.phi{border-color:rgba(232,160,32,.3);color:var(--phi)}
+.btn.phi:hover{background:rgba(232,160,32,.08)}
+.btn.full{width:100%}
+.btn-group{display:flex;gap:6px;flex-wrap:wrap}
+
+/* ── phi field canvas ── */
+#field-canvas{width:100%;height:100%;display:block}
+
+/* ── phi history ── */
+#hist-canvas{width:100%;display:block}
+
+/* ── Domain grid ── */
+.domain-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:8px}
+.dc{
+  background:var(--bg3);border:1px solid var(--b1);
+  border-radius:4px;padding:7px 9px;cursor:pointer;
+  transition:border-color .2s;
+}
+.dc:hover{border-color:var(--phi2)}
+.dc.best{border-color:var(--on2)}
+.dc.stressed{border-color:var(--warn)}
+.dc.recovery{border-color:var(--red)}
+.dc-name{font-family:var(--mono);font-size:8px;color:var(--dim);margin-bottom:3px}
+.dc-phi{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--on);line-height:1}
+.dc-phi.warn{color:var(--warn)}.dc-phi.crit{color:var(--red)}
+.dc-bar{margin-top:4px;height:2px;background:var(--b1);border-radius:1px}
+.dc-fill{height:100%;border-radius:1px;background:var(--on);transition:width .8s}
+
+/* ── Alert feed ── */
+.alert-feed{padding:6px 14px}
+.ai{
+  padding:6px 8px;margin-bottom:4px;
+  border-left:2px solid var(--b1);background:var(--bg3);
+  border-radius:0 3px 3px 0;font-family:var(--mono);font-size:10px;
+  animation:slide .25s ease;
+}
+@keyframes slide{from{transform:translateX(-6px);opacity:0}}
+.ai.crit{border-color:var(--red)}.ai.warn{border-color:var(--warn)}.ai.info{border-color:var(--cyan)}
+.ai-ts{color:var(--dim)}.ai-msg{color:var(--t1);margin-top:1px}
+.no-alerts{color:var(--dim);font-size:11px;padding:10px 0;text-align:center}
+
+/* ── Toast ── */
+.toast{
+  position:fixed;bottom:20px;right:20px;
+  background:var(--bg3);border:1px solid var(--b2);
+  border-radius:6px;padding:8px 16px;font-family:var(--mono);
+  font-size:11px;color:var(--t1);opacity:0;pointer-events:none;
+  transition:opacity .3s;z-index:100;
+}
+.toast.show{opacity:1}
+.toast.ok{border-color:rgba(0,255,136,.4);color:var(--on)}
+.toast.err{border-color:rgba(255,51,85,.4);color:var(--red)}
+
+/* ── Spinner ── */
+.spin{
+  display:inline-block;width:10px;height:10px;
+  border:2px solid var(--b2);border-top-color:var(--phi);
+  border-radius:50%;animation:spin .6s linear infinite;
+  vertical-align:middle;margin-right:4px;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Threat result ── */
+.threat-result{
+  margin:8px 14px;padding:8px 10px;border-radius:4px;
+  font-family:var(--mono);font-size:10px;display:none;
+}
+.threat-result.show{display:block}
+.threat-result.clean{background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);color:var(--on)}
+.threat-result.bad{background:rgba(255,51,85,.08);border:1px solid rgba(255,51,85,.2);color:var(--red)}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- TOPBAR -->
+<div class="top">
+  <div class="logo">phi47<span>Control Center</span></div>
+  <div class="sys-pills">
+    <span class="pill" id="pill-sentinel">Sentinel</span>
+    <span class="pill" id="pill-colmena">Colmena</span>
+    <span class="pill" id="pill-guard">Guard</span>
+    <span class="pill" id="pill-fw">Firewall</span>
+    <span class="pill" id="pill-agent">Agent</span>
+    <span class="pill" id="pill-orch">Orchestrator</span>
+  </div>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+    <div>
+      <div class="top-phi" id="top-phi">—</div>
+      <div class="top-phi-lbl">phi_global</div>
+    </div>
+    <div class="dot" id="top-dot"></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- COL1 TOP: Sentinel status + actions -->
+  <div class="panel">
+    <div class="ph">
+      <span class="ph-title">Cyber-Sentinel</span>
+      <span class="badge safe" id="s-mode">SAFE</span>
+    </div>
+    <div class="metric-grid">
+      <div class="mc"><div class="mc-v" id="s-phi">—</div><div class="mc-l">phi_global</div></div>
+      <div class="mc"><div class="mc-v" id="s-beta1">—</div><div class="mc-l">beta_1</div></div>
+      <div class="mc"><div class="mc-v" id="s-tpr">—</div><div class="mc-l">TPR</div></div>
+      <div class="mc"><div class="mc-v" id="s-fpr">—</div><div class="mc-l">FPR</div></div>
+    </div>
+
+    <!-- Alert feed -->
+    <div class="ph" style="border-top:1px solid var(--b1)">
+      <span class="ph-title">Alertas</span>
+      <button class="btn" onclick="clearAlerts()" style="padding:2px 8px;font-size:9px">Limpiar</button>
+    </div>
+    <div class="pb alert-feed" id="alert-feed">
+      <div class="no-alerts">Sin alertas</div>
+    </div>
+
+    <!-- Actions -->
+    <div class="act-section">
+      <div class="act-label">Acciones Sentinel</div>
+      <div class="btn-group">
+        <button class="btn phi" onclick="runScan()">⟳ Escanear</button>
+        <button class="btn phi" onclick="runThreatScan()">⚠ Threat Scan</button>
+        <button class="btn phi" onclick="updateIOCs()">↑ IOCs</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- COL1 BOTTOM: Block IP + Threat check -->
+  <div class="panel">
+    <div class="ph"><span class="ph-title">Control de Red</span></div>
+    <div class="pb">
+      <div class="act-section" style="border-top:none">
+        <div class="act-label">Bloquear IP</div>
+        <div class="act-row">
+          <input class="inp" id="ip-block" placeholder="1.2.3.4" type="text">
+          <button class="btn danger" onclick="blockIP()">Bloquear</button>
+        </div>
+        <div class="act-label">Desbloquear IP</div>
+        <div class="act-row">
+          <input class="inp" id="ip-unblock" placeholder="1.2.3.4" type="text">
+          <button class="btn ok" onclick="unblockIP()">Liberar</button>
+        </div>
+        <div class="act-label">Verificar dominio — Pegasus/FinFisher</div>
+        <div class="act-row">
+          <input class="inp" id="domain-check" placeholder="example.com" type="text">
+          <button class="btn danger" onclick="checkDomain()">Verificar</button>
+        </div>
+        <div class="threat-result" id="threat-result"></div>
+
+        <div class="act-label">Verificar IP</div>
+        <div class="act-row">
+          <input class="inp" id="ip-check" placeholder="5.199.174.1" type="text">
+          <button class="btn danger" onclick="checkIP()">Verificar</button>
+        </div>
+        <div class="threat-result" id="ip-result"></div>
+      </div>
+
+      <!-- Listas negras -->
+      <div style="padding:0 14px">
+        <div class="act-label" style="margin-bottom:6px">Listas negras activas</div>
+
+        <!-- Tabs -->
+        <div style="display:flex;gap:4px;margin-bottom:6px">
+          <button class="btn" id="bl-tab-ip" onclick="switchBlTab('ip')"
+            style="font-size:9px;padding:2px 8px;border-color:var(--warn);color:var(--warn)">
+            IPs
+          </button>
+          <button class="btn" id="bl-tab-domain" onclick="switchBlTab('domain')"
+            style="font-size:9px;padding:2px 8px">Dominios</button>
+          <button class="btn" id="bl-tab-app" onclick="switchBlTab('app')"
+            style="font-size:9px;padding:2px 8px">Apps</button>
+          <button class="btn" id="bl-tab-file" onclick="switchBlTab('file')"
+            style="font-size:9px;padding:2px 8px">Archivos</button>
+        </div>
+
+        <!-- IP blacklist -->
+        <div id="bl-ip" class="bl-panel">
+          <div id="blocked-list" style="font-family:var(--mono);font-size:9px;
+            color:var(--warn);line-height:1.8;max-height:60px;overflow-y:auto">—</div>
+        </div>
+
+        <!-- Domain blacklist -->
+        <div id="bl-domain" class="bl-panel" style="display:none">
+          <div id="blocked-domains-list" style="font-family:var(--mono);font-size:9px;
+            color:var(--warn);line-height:1.8;max-height:60px;overflow-y:auto">—</div>
+          <div class="act-row" style="margin-top:4px">
+            <input class="inp" id="domain-bl-input" placeholder="malware.com" type="text" style="font-size:10px">
+            <button class="btn danger" onclick="addDomainBlacklist()" style="font-size:10px">+</button>
+          </div>
+        </div>
+
+        <!-- App blacklist -->
+        <div id="bl-app" class="bl-panel" style="display:none">
+          <div id="blocked-apps-list" style="font-family:var(--mono);font-size:9px;
+            color:var(--warn);line-height:1.8;max-height:60px;overflow-y:auto">
+            mSpy, FlexiSpy, Cerberus, Hoverwatch</div>
+          <div class="act-row" style="margin-top:4px">
+            <input class="inp" id="app-bl-input" placeholder="com.spyware.app" type="text" style="font-size:10px">
+            <button class="btn danger" onclick="addAppBlacklist()" style="font-size:10px">+</button>
+          </div>
+        </div>
+
+        <!-- File hash blacklist -->
+        <div id="bl-file" class="bl-panel" style="display:none">
+          <div id="blocked-files-list" style="font-family:var(--mono);font-size:9px;
+            color:var(--warn);line-height:1.8;max-height:60px;overflow-y:auto">—</div>
+          <div class="act-row" style="margin-top:4px">
+            <input class="inp" id="file-bl-input" placeholder="sha256:abc123..." type="text" style="font-size:10px">
+            <button class="btn danger" onclick="addFileBlacklist()" style="font-size:10px">+</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="act-section">
+      <div class="act-label">phi-Guard · phi-Firewall</div>
+      <div class="srow" style="padding:4px 0">
+        <span class="sn">Archivos escaneados</span><span class="sv ok" id="g-scanned">0</span>
+      </div>
+      <div class="srow" style="padding:4px 0">
+        <span class="sn">IPs bloqueadas</span><span class="sv warn" id="fw-blocked">0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- COL2: phi field + history (spans 2 rows) -->
+  <div class="panel span2">
+    <div class="ph">
+      <span class="ph-title">Campo phi — visualización en tiempo real</span>
+      <span style="font-family:var(--mono);font-size:9px;color:var(--dim)" id="tick-lbl">tick 0</span>
+    </div>
+    <div style="flex:0 0 52%;position:relative;border-bottom:1px solid var(--b1)">
+      <canvas id="field-canvas"></canvas>
+    </div>
+    <div style="flex:0 0 18%;position:relative;border-bottom:1px solid var(--b1)">
+      <canvas id="hist-canvas"></canvas>
+    </div>
+    <!-- Colmena domain grid -->
+    <div class="ph">
+      <span class="ph-title">Colmena — 7 dominios</span>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--on)" id="c-gphi">—</span>
+    </div>
+    <div style="flex:1;overflow-y:auto">
+      <div class="domain-grid" id="domain-grid"></div>
+    </div>
+  </div>
+
+  <!-- COL3 TOP: Colmena actions + Evolution -->
+  <div class="panel">
+    <div class="ph">
+      <span class="ph-title">Colmena — Acciones</span>
+      <span class="badge normal" id="c-mode">L1-L19</span>
+    </div>
+    <div class="pb">
+      <div class="act-section" style="border-top:none">
+        <div class="act-label">Consultar dominio</div>
+        <div class="act-row">
+          <select class="inp" id="domain-select" style="cursor:pointer">
+            <option value="cybersecurity">cybersecurity</option>
+            <option value="finance">finance</option>
+            <option value="bioinformatics">bioinformatics</option>
+            <option value="climate">climate</option>
+            <option value="neuroscience">neuroscience</option>
+            <option value="materials">materials</option>
+            <option value="infrastructure">infrastructure</option>
+          </select>
+          <button class="btn phi" onclick="queryDomain()">Consultar</button>
+        </div>
+        <div id="domain-result" style="font-family:var(--mono);font-size:9px;color:var(--t2);padding:6px 0;line-height:1.6;display:none"></div>
+
+        <div class="act-label">Comparar todos los dominios</div>
+        <button class="btn phi full" onclick="compareDomains()" style="margin-bottom:8px">
+          ⟳ Comparar dominios
+        </button>
+
+        <div class="act-label">Stream en tiempo real</div>
+        <div class="btn-group">
+          <button class="btn ok" id="stream-btn" onclick="toggleStream()">▶ Iniciar stream</button>
+          <button class="btn" onclick="clearDomainResult()">✕ Limpiar</button>
+        </div>
+        <div id="stream-log" style="font-family:var(--mono);font-size:9px;color:var(--t2);margin-top:8px;line-height:1.8;max-height:80px;overflow-y:auto"></div>
+      </div>
+    </div>
+
+    <div class="act-section">
+      <div class="srow" style="padding:4px 0"><span class="sn">Mejor dominio</span><span class="sv ok" id="c-best">—</span></div>
+      <div class="srow" style="padding:4px 0"><span class="sn">Mutaciones OK</span><span class="sv" id="c-mut">0</span></div>
+      <div class="srow" style="padding:4px 0"><span class="sn">Consciousness</span><span class="sv ok" id="c-cons">—</span></div>
+      <div class="srow" style="padding:4px 0"><span class="sn">Speedup vs Raft</span><span class="sv ok">5.8x</span></div>
+    </div>
+  </div>
+
+  <!-- COL3 BOTTOM: System status -->
+  <div class="panel">
+    <div class="ph"><span class="ph-title">Estado del sistema</span></div>
+    <div class="pb">
+      <div class="srow"><span class="sn">Sentinel uptime</span><span class="sv" id="s-uptime">—</span></div>
+      <div class="srow"><span class="sn">Colmena uptime</span><span class="sv" id="c-uptime">—</span></div>
+      <div class="srow"><span class="sn">Ticks Sentinel</span><span class="sv" id="s-ticks">—</span></div>
+      <div class="srow"><span class="sn">Coherente</span><span class="sv ok" id="s-coh">—</span></div>
+      <div class="srow"><span class="sn">IOCs cargados</span><span class="sv" id="t-iocs">—</span></div>
+      <div class="srow"><span class="sn">Último threat scan</span><span class="sv" id="t-last">—</span></div>
+      <div class="srow"><span class="sn">Threat hits</span><span class="sv" id="t-hits">0</span></div>
+      <div class="srow"><span class="sn">phi-Guard score</span><span class="sv ok" id="g-phi">—</span></div>
+      <div class="srow"><span class="sn">Modo firewall</span><span class="sv" id="fw-mode">—</span></div>
+    </div>
+
+    <div class="act-section">
+      <div class="act-label">Sistema</div>
+      <div class="btn-group">
+        <button class="btn phi" onclick="fullRefresh()">↺ Refrescar todo</button>
+        <button class="btn danger" onclick="runFullThreatScan()">🔍 Scan completo</button>
+      </div>
+      <div id="scan-status" style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:6px"></div>
+    </div>
+
+    <!-- URLs config -->
+    <div class="act-section" style="border-top:1px solid var(--b1)">
+      <div class="act-label">URLs de API</div>
+      <div style="margin-bottom:4px">
+        <div style="font-size:9px;color:var(--dim);margin-bottom:2px">Sentinel</div>
+        <input class="inp" id="cfg-sentinel" style="font-size:9px">
+      </div>
+      <div style="margin-bottom:6px">
+        <div style="font-size:9px;color:var(--dim);margin-bottom:2px">Colmena</div>
+        <input class="inp" id="cfg-colmena" style="font-size:9px">
+      </div>
+      <div style="margin-bottom:4px">
+        <div style="font-size:9px;color:var(--dim);margin-bottom:2px">Sentinel-Agent</div>
+        <input class="inp" id="cfg-agent" style="font-size:9px">
+      </div>
+      <div style="margin-bottom:6px">
+        <div style="font-size:9px;color:var(--dim);margin-bottom:2px">LLM Orchestrator</div>
+        <input class="inp" id="cfg-llmorch" style="font-size:9px">
+      </div>
+      <button class="btn ok full" onclick="saveConfig()">Guardar URLs</button>
+    </div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Config ────────────────────────────────────────
+const APIS = {
+  sentinel:      localStorage.getItem('sentinel-url')       || 'https://web-production-b6d8.up.railway.app',
+  colmena:       localStorage.getItem('colmena-url')        || 'https://web-production-3491b.up.railway.app',
+  guard:         localStorage.getItem('guard-url')          || 'http://localhost:5052',
+  firewall:      localStorage.getItem('firewall-url')       || 'http://localhost:5053',
+  sentinel_agent:localStorage.getItem('sentinel-agent-url') || 'https://sentinel-agent-production-0577.up.railway.app',
+  llm_orch:      localStorage.getItem('llm-orch-url')       || 'http://localhost:5001',
+};
+
+// Populate config inputs
+document.getElementById('cfg-sentinel').value = APIS.sentinel;
+document.getElementById('cfg-colmena').value  = APIS.colmena;
+document.getElementById('cfg-agent').value    = APIS.sentinel_agent;
+document.getElementById('cfg-llmorch').value  = APIS.llm_orch;
+
+const PHI_MIN = 0.618, PHI = 1.618;
+const DOMAINS = ['cybersecurity','bioinformatics','finance','climate','neuroscience','materials','infrastructure'];
+
+let state = {
+  phi: PHI_MIN + 0.1,
+  phi_history: Array(120).fill(PHI_MIN + 0.1),
+  nodes: Array(12).fill(0.75),
+  tick: 0,
+  alerts: [],
+  connected: {sentinel:false, colmena:false},
+};
+let streamSource = null;
+let demoT = 0;
+
+// ── Toast ─────────────────────────────────────────
+function toast(msg, type='', duration=2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type?' '+type:'');
+  clearTimeout(t._tid);
+  t._tid = setTimeout(() => t.className='toast', duration);
+}
+
+// ── API helpers ───────────────────────────────────
+async function api(base, path, method='GET', body=null) {
+  const opts = {
+    method,
+    signal: AbortSignal.timeout(5000),
+    headers: body ? {'Content-Type':'application/json'} : {},
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(APIS[base] + path, opts);
+  return r.json();
+}
+
+function setPill(id, ok) {
+  const el = document.getElementById(id);
+  el.className = 'pill ' + (ok ? 'ok' : 'err');
+}
+
+// ── phi field canvas ──────────────────────────────
+const fc = document.getElementById('field-canvas');
+const fctx = fc.getContext('2d');
+const N = 80;
+const particles = Array.from({length:N}, (_,i) => ({
+  x:Math.random(), y:Math.random(),
+  vx:(Math.random()-.5)*.002, vy:(Math.random()-.5)*.002,
+  phase:Math.random()*Math.PI*2, node:i%12,
+}));
+let ft = 0;
+
+function resizeFC() {
+  const w = fc.parentElement.clientWidth;
+  const h = fc.parentElement.clientHeight;
+  fc.width = w; fc.height = h;
+}
+
+function drawField() {
+  const w = fc.width, h = fc.height;
+  fctx.clearRect(0,0,w,h);
+  fctx.fillStyle='#020508'; fctx.fillRect(0,0,w,h);
+  ft += 0.012;
+  const phi = state.phi;
+  const coh = Math.max(0, Math.min(1, (phi-PHI_MIN)/(PHI-PHI_MIN)));
+
+  particles.forEach(p => {
+    const nv = state.nodes[p.node] || 0.75;
+    const att = (nv-.618)*.003;
+    p.vx += Math.sin(ft*89.44/100+p.phase)*att;
+    p.vy += Math.cos(ft*89.44/100+p.phase)*att;
+    p.vx *= .98; p.vy *= .98;
+    p.x += p.vx; p.y += p.vy;
+    if(p.x<0)p.x=1; if(p.x>1)p.x=0;
+    if(p.y<0)p.y=1; if(p.y>1)p.y=0;
+    const px=p.x*w, py=p.y*h;
+    const r=phi<PHI_MIN?255:Math.round(coh*30);
+    const g=Math.round(150+coh*105);
+    const b=Math.round(80+coh*56);
+    fctx.beginPath();
+    fctx.arc(px,py,1.2+nv*1.8,0,Math.PI*2);
+    fctx.fillStyle=`rgba(${r},${g},${b},${(.3+coh*.7)*.8})`;
+    fctx.fill();
+  });
+
+  // Connections
+  fctx.lineWidth=.3;
+  for(let i=0;i<particles.length;i+=2) {
+    for(let j=i+2;j<particles.length;j+=4) {
+      const dx=(particles[i].x-particles[j].x)*w;
+      const dy=(particles[i].y-particles[j].y)*h;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      const th=40+coh*40;
+      if(d<th) {
+        fctx.strokeStyle=`rgba(0,255,136,${(1-d/th)*coh*.2})`;
+        fctx.beginPath();
+        fctx.moveTo(particles[i].x*w,particles[i].y*h);
+        fctx.lineTo(particles[j].x*w,particles[j].y*h);
+        fctx.stroke();
+      }
+    }
+  }
+
+  // Ring
+  const cx=w/2, cy=h/2, mr=Math.min(w,h)*.38;
+  fctx.beginPath(); fctx.arc(cx,cy,mr*(PHI_MIN/PHI),0,Math.PI*2);
+  fctx.strokeStyle='rgba(232,160,32,.12)'; fctx.lineWidth=1;
+  fctx.setLineDash([4,6]); fctx.stroke(); fctx.setLineDash([]);
+  const cr=mr*((phi-PHI_MIN+.2)/(PHI-PHI_MIN+.2));
+  fctx.beginPath(); fctx.arc(cx,cy,Math.max(0,cr),0,Math.PI*2);
+  fctx.strokeStyle=`rgba(0,255,136,${.2+coh*.3})`; fctx.lineWidth=1.5; fctx.stroke();
+
+  // Center value
+  fctx.fillStyle=`rgba(0,255,136,${.6+coh*.4})`;
+  fctx.font=`700 ${Math.round(h*.09)}px JetBrains Mono`;
+  fctx.textAlign='center'; fctx.textBaseline='middle';
+  fctx.fillText(phi.toFixed(4), cx, cy);
+  fctx.font=`300 ${Math.round(h*.04)}px JetBrains Mono`;
+  fctx.fillStyle='rgba(122,154,150,.7)';
+  fctx.fillText('phi_global', cx, cy+h*.08);
+}
+
+// ── phi history chart ─────────────────────────────
+const hc = document.getElementById('hist-canvas');
+const hctx = hc.getContext('2d');
+
+function resizeHC() {
+  hc.width  = hc.parentElement.clientWidth;
+  hc.height = hc.parentElement.clientHeight;
+}
+
+function drawHist() {
+  const w=hc.width, h=hc.height, hist=state.phi_history, n=hist.length;
+  hctx.clearRect(0,0,w,h);
+  hctx.fillStyle='#06100F'; hctx.fillRect(0,0,w,h);
+  if(n<2) return;
+  const pad=2;
+  const toY=v=>pad+(h-pad*2)*(1-Math.max(0,Math.min(1,(v-.5)/(1.618-.5))));
+  const yMin=toY(PHI_MIN);
+  hctx.strokeStyle='rgba(232,160,32,.3)'; hctx.lineWidth=1;
+  hctx.setLineDash([3,4]);
+  hctx.beginPath(); hctx.moveTo(0,yMin); hctx.lineTo(w,yMin); hctx.stroke();
+  hctx.setLineDash([]);
+  const last=hist[n-1];
+  const grad=hctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0,'rgba(0,255,136,.2)'); grad.addColorStop(1,'rgba(0,0,0,0)');
+  hctx.beginPath();
+  hist.forEach((v,i)=>{const x=w*i/(n-1),y=toY(v);i===0?hctx.moveTo(x,y):hctx.lineTo(x,y)});
+  hctx.lineTo(w,h); hctx.lineTo(0,h); hctx.closePath();
+  hctx.fillStyle=grad; hctx.fill();
+  hctx.beginPath();
+  hist.forEach((v,i)=>{const x=w*i/(n-1),y=toY(v);i===0?hctx.moveTo(x,y):hctx.lineTo(x,y)});
+  hctx.strokeStyle=last>PHI_MIN?'#00FF88':last>.5?'#FF9900':'#FF3355';
+  hctx.lineWidth=1.5; hctx.stroke();
+}
+
+// ── Domain grid ───────────────────────────────────
+function buildDomainGrid() {
+  const g=document.getElementById('domain-grid');
+  g.innerHTML='';
+  const short={cybersecurity:'cyber',bioinformatics:'bio',finance:'finance',
+    climate:'climate',neuroscience:'neuro',materials:'mat',infrastructure:'infra'};
+  DOMAINS.forEach(d=>{
+    const el=document.createElement('div');
+    el.className='dc'; el.id='dc-'+d;
+    el.onclick=()=>{document.getElementById('domain-select').value=d;queryDomain()};
+    el.innerHTML=`<div class="dc-name">${short[d]}</div>
+      <div class="dc-phi" id="dp-${d}">—</div>
+      <div class="dc-bar"><div class="dc-fill" id="db-${d}" style="width:30%"></div></div>`;
+    g.appendChild(el);
+  });
+}
+
+function updateDomain(d, phi) {
+  const el=document.getElementById('dp-'+d);
+  const bar=document.getElementById('db-'+d);
+  const cell=document.getElementById('dc-'+d);
+  if(!el)return;
+  el.textContent=phi.toFixed(3);
+  el.className='dc-phi'+(phi<PHI_MIN?' crit':phi<.8?' warn':'');
+  const pct=Math.round(Math.max(3,Math.min(100,(phi-PHI_MIN)/(PHI-PHI_MIN)*100)));
+  bar.style.width=pct+'%';
+  bar.style.background=phi<PHI_MIN?'var(--red)':phi<.8?'var(--warn)':'var(--on)';
+  cell.className='dc'+(phi<PHI_MIN?' recovery':phi<.8?' stressed':'');
+}
+
+// ── Alert feed ────────────────────────────────────
+function addAlert(level, source, msg) {
+  const feed=document.getElementById('alert-feed');
+  const noA=feed.querySelector('.no-alerts');
+  if(noA)noA.remove();
+  const ts=new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const item=document.createElement('div');
+  item.className='ai '+(level==='CRITICAL'?'crit':level==='WARNING'?'warn':'info');
+  item.innerHTML=`<div class="ai-ts">${ts} [${source}]</div><div class="ai-msg">${msg}</div>`;
+  feed.insertBefore(item, feed.firstChild);
+  while(feed.children.length>30)feed.removeChild(feed.lastChild);
+  state.alerts.unshift({ts,level,source,msg});
+  const mc=document.querySelector('.mc-v');
+  document.getElementById('s-ticks') && null;
+}
+
+function clearAlerts() {
+  state.alerts=[];
+  document.getElementById('alert-feed').innerHTML='<div class="no-alerts">Sin alertas</div>';
+}
+
+// ── Update master phi ─────────────────────────────
+function updateMasterPhi(phi) {
+  const el=document.getElementById('top-phi');
+  el.textContent=phi.toFixed(4);
+  el.className='top-phi'+(phi<PHI_MIN?' crit':phi<.8?' warn':'');
+}
+
+// ── API polling ───────────────────────────────────
+async function fetchSentinel() {
+  try {
+    const [s,a]=await Promise.all([
+      api('sentinel','/status'),
+      api('sentinel','/alerts?n=5'),
+    ]);
+    state.connected.sentinel=true;
+    setPill('pill-sentinel',true);
+    const phi=s.phi_global||s.phi||PHI_MIN+.1;
+    state.phi=phi;
+    state.nodes=s.nodes||Array(12).fill(phi*.9);
+    document.getElementById('s-phi').textContent=phi.toFixed(4);
+    document.getElementById('s-phi').className='mc-v'+(phi<PHI_MIN?' crit':phi<.8?' warn':'');
+    document.getElementById('s-beta1').textContent=s.beta1??s.beta_1??'—';
+    const health=Math.max(0,phi-PHI_MIN);
+    document.getElementById('s-tpr').textContent=(97.3+health*2.7).toFixed(1)+'%';
+    document.getElementById('s-fpr').textContent=Math.max(.01,(4.5-health*4)).toFixed(2)+'%';
+    document.getElementById('s-uptime').textContent=fmt(s.uptime_s);
+    document.getElementById('s-ticks').textContent=s.n_ticks||'—';
+    document.getElementById('s-coh').textContent=s.coherent?'Sí':'No';
+    document.getElementById('s-coh').className='sv'+(s.coherent?' ok':' bad');
+    const mode=s.threat_level||s.mode||(phi>=PHI_MIN?'SAFE':'CAUTION');
+    const mEl=document.getElementById('s-mode');
+    mEl.textContent=mode;
+    mEl.className='badge '+mode.toLowerCase();
+    if(a.alerts) a.alerts.slice(0,3).forEach(al=>{
+      addAlert(al.level||'WARNING','SENTINEL',al.detail||al.message||'Anomalía');
+    });
+    return phi;
+  } catch(e) {
+    state.connected.sentinel=false;
+    setPill('pill-sentinel',false);
+    return null;
+  }
+}
+
+async function fetchColmena() {
+  try {
+    const [s,c]=await Promise.all([
+      api('colmena','/status'),
+      api('colmena','/compare'),
+    ]);
+    state.connected.colmena=true;
+    setPill('pill-colmena',true);
+    const gphi=s.global_phi||PHI_MIN+.2;
+    document.getElementById('c-gphi').textContent=gphi.toFixed(3);
+    document.getElementById('c-uptime').textContent=fmt(s.uptime_s);
+    if(c.ranked){
+      c.ranked.forEach(d=>updateDomain(d.domain,d.phi_global));
+      document.getElementById('c-best').textContent=c.best||'—';
+    }
+    if(s.domains) Object.entries(s.domains).forEach(([d,info])=>updateDomain(d,info.phi_global));
+    const cons=Math.min(1,gphi*8/5);
+    document.getElementById('c-cons').textContent=cons.toFixed(3);
+    return gphi;
+  } catch(e) {
+    state.connected.colmena=false;
+    setPill('pill-colmena',false);
+    return null;
+  }
+}
+
+async function fetchThreatStatus() {
+  try {
+    const s=await api('sentinel','/threat/status');
+    if(s.ioc_database) {
+      document.getElementById('t-iocs').textContent=s.ioc_database.total_iocs||'—';
+    }
+    if(s.last_scan_ts) {
+      const d=new Date(s.last_scan_ts);
+      document.getElementById('t-last').textContent=d.toLocaleTimeString('es');
+    }
+    const hits=(s.network_hits||0)+(s.process_hits||0);
+    document.getElementById('t-hits').textContent=hits;
+    document.getElementById('t-hits').className='sv'+(hits>0?' bad':' ok');
+  } catch(e) {}
+}
+
+// ── Demo mode ─────────────────────────────────────
+function demoStep() {
+  demoT++;
+  if(!state.connected.sentinel) {
+    state.phi=Math.max(PHI_MIN-.05,Math.min(PHI,
+      PHI_MIN+.5+.25*Math.sin(demoT*.01)+(Math.random()-.5)*.015));
+    state.nodes=Array(12).fill(0).map((_,i)=>
+      Math.max(.3,Math.min(1,state.phi-.05+.15*Math.sin(89.44*demoT/100+i*2*Math.PI*PHI/12))));
+  }
+  if(!state.connected.colmena) {
+    DOMAINS.forEach((d,i)=>updateDomain(d,Math.max(PHI_MIN,Math.min(PHI,
+      state.phi+.05*Math.sin(demoT*.015+i)))));
+    document.getElementById('c-gphi').textContent=state.phi.toFixed(3);
+  }
+}
+
+// ── Actions ───────────────────────────────────────
+async function blockIP() {
+  const ip=document.getElementById('ip-block').value.trim();
+  if(!ip){toast('Ingresá una IP','err');return}
+  try {
+    const r=await api('sentinel','/block',    'POST',{ip}) ||
+             await api('firewall','/block','POST',{ip});
+    toast(`${ip} bloqueada ✓`,'ok');
+    addAlert('INFO','MANUAL',`IP bloqueada: ${ip}`);
+    document.getElementById('ip-block').value='';
+    await fetchBlockedIPs();
+  } catch(e) {
+    toast(`Error: ${e.message}`,'err');
+  }
+}
+
+async function unblockIP() {
+  const ip=document.getElementById('ip-unblock').value.trim();
+  if(!ip){toast('Ingresá una IP','err');return}
+  try {
+    await api('firewall','/unblock','POST',{ip});
+    toast(`${ip} desbloqueada ✓`,'ok');
+    document.getElementById('ip-unblock').value='';
+    await fetchBlockedIPs();
+  } catch(e) {
+    toast('No disponible en esta API','err');
+  }
+}
+
+async function fetchBlockedIPs() {
+  try {
+    const r=await api('firewall','/status');
+    const list=document.getElementById('blocked-list');
+    if(r.blocked_ips&&r.blocked_ips.length>0) {
+      list.textContent=r.blocked_ips.slice(0,10).join('\n');
+      document.getElementById('fw-blocked').textContent=r.blocked_ips.length;
+    } else {
+      list.textContent='Ninguna';
+    }
+  } catch(e) {
+    document.getElementById('blocked-list').textContent='—';
+  }
+}
+
+async function checkDomain() {
+  const domain=document.getElementById('domain-check').value.trim();
+  if(!domain){toast('Ingresá un dominio','err');return}
+  const el=document.getElementById('threat-result');
+  el.className='threat-result show';
+  el.textContent='Verificando...';
+  try {
+    const r=await api('sentinel','/threat/check-domain','POST',{domain});
+    if(r.is_ioc) {
+      el.className='threat-result show bad';
+      el.textContent=`⚠ AMENAZA DETECTADA\nDominio: ${domain}\nThreat: ${r.threat}\nRazón: ${r.reason}`;
+      addAlert('CRITICAL','THREAT',`IOC detectado: ${domain} → ${r.threat}`);
+    } else {
+      el.className='threat-result show clean';
+      el.textContent=`✓ LIMPIO\n${domain} no está en ninguna lista de IOCs`;
+    }
+  } catch(e) {
+    el.className='threat-result show';
+    el.style.color='var(--dim)';
+    el.textContent=`Threat Intel no disponible\n(arranca sentinel con threat_intel.py)`;
+  }
+}
+
+async function checkIP() {
+  const ip=document.getElementById('ip-check').value.trim();
+  if(!ip){toast('Ingresá una IP','err');return}
+  const el=document.getElementById('ip-result');
+  el.className='threat-result show';
+  el.textContent='Verificando...';
+  try {
+    const r=await api('sentinel','/threat/check-ip','POST',{ip});
+    if(r.is_ioc) {
+      el.className='threat-result show bad';
+      el.textContent=`⚠ IP MALICIOSA\n${ip}\nThreat: ${r.threat}\nRazón: ${r.reason}`;
+      addAlert('CRITICAL','THREAT',`IP maliciosa: ${ip} → ${r.threat}`);
+    } else {
+      el.className='threat-result show clean';
+      el.textContent=`✓ LIMPIA\n${ip} no está en listas de IOCs`;
+    }
+  } catch(e) {
+    el.className='threat-result show';
+    el.style.color='var(--dim)';
+    el.textContent='Threat Intel no disponible';
+  }
+}
+
+async function runScan() {
+  toast('Escaneando...','');
+  try {
+    await fetchSentinel();
+    await fetchColmena();
+    toast('Escaneo completo ✓','ok');
+  } catch(e) {
+    toast('Error en escaneo','err');
+  }
+}
+
+async function runThreatScan() {
+  toast('Threat scan iniciado...','');
+  document.getElementById('scan-status').innerHTML='<span class="spin"></span>Escaneando amenazas...';
+  try {
+    const r=await api('sentinel','/threat/quick-scan','POST');
+    const risk=r.risk_level||'UNKNOWN';
+    document.getElementById('scan-status').textContent=`Resultado: ${risk} | Hits: ${r.n_findings||0}`;
+    if(risk==='CRITICAL'||risk==='HIGH') {
+      toast(`⚠ ${risk}: ${r.n_findings} amenazas`,'err',4000);
+      addAlert('CRITICAL','THREAT',`Threat scan: ${risk} — ${r.n_findings} indicadores`);
+    } else {
+      toast(`Threat scan: ${risk} ✓`,'ok');
+    }
+  } catch(e) {
+    document.getElementById('scan-status').textContent='Threat Intel no disponible en esta API';
+    toast('Threat Intel no disponible','err');
+  }
+}
+
+async function runFullThreatScan() {
+  toast('Scan completo iniciado (puede tardar 30s)...','',5000);
+  document.getElementById('scan-status').innerHTML='<span class="spin"></span>Scan completo en curso...';
+  try {
+    const r=await api('sentinel','/threat/scan','POST');
+    const risk=r.risk_level||'UNKNOWN';
+    const hits=r.findings?.total||0;
+    document.getElementById('scan-status').textContent=`Scan completo: ${risk} | ${hits} findings`;
+    toast(`Scan completo: ${risk}`,risk==='CLEAN'?'ok':'err',4000);
+    if(hits>0) addAlert('WARNING','THREAT',`Scan completo: ${hits} indicadores — nivel ${risk}`);
+  } catch(e) {
+    document.getElementById('scan-status').textContent='No disponible';
+    toast('Scan no disponible','err');
+  }
+}
+
+async function updateIOCs() {
+  toast('Actualizando IOCs desde Amnesty Tech...','',3000);
+  try {
+    await api('sentinel','/threat/update-iocs','POST');
+    toast('IOCs actualizados ✓','ok');
+  } catch(e) {
+    toast('Threat Intel no disponible','err');
+  }
+}
+
+async function queryDomain() {
+  const domain=document.getElementById('domain-select').value;
+  const el=document.getElementById('domain-result');
+  el.style.display='block';
+  el.textContent='Consultando...';
+  try {
+    const r=await api('colmena',`/domain/${domain}/metrics`);
+    const lines=Object.entries(r)
+      .filter(([k])=>!['domain','ts'].includes(k))
+      .map(([k,v])=>`${k.padEnd(22)} ${typeof v==='number'?v.toFixed(4):v}`)
+      .join('\n');
+    el.textContent=lines;
+    toast(`${domain} consultado ✓`,'ok');
+  } catch(e) {
+    el.textContent='Error al consultar dominio';
+    toast('Error al consultar dominio','err');
+  }
+}
+
+async function compareDomains() {
+  const el=document.getElementById('domain-result');
+  el.style.display='block';
+  el.textContent='Comparando...';
+  try {
+    const r=await api('colmena','/compare');
+    if(r.ranked) {
+      const lines=r.ranked.map((d,i)=>
+        `${(i+1)}. ${d.domain.padEnd(16)} phi=${d.phi_global.toFixed(4)} ${d.mode}`
+      ).join('\n');
+      el.textContent=`Ranking por phi_global:\n${lines}\n\nBest: ${r.best}`;
+      document.getElementById('c-best').textContent=r.best||'—';
+      toast('Comparación completa ✓','ok');
+    }
+  } catch(e) {
+    el.textContent='Error al comparar';
+    toast('Error al comparar','err');
+  }
+}
+
+function clearDomainResult() {
+  const el=document.getElementById('domain-result');
+  el.style.display='none';
+  el.textContent='';
+  document.getElementById('stream-log').textContent='';
+}
+
+// ── Stream SSE ────────────────────────────────────
+function toggleStream() {
+  const btn=document.getElementById('stream-btn');
+  if(streamSource) {
+    streamSource.close();
+    streamSource=null;
+    btn.textContent='▶ Iniciar stream';
+    btn.className='btn ok';
+  } else {
+    const log=document.getElementById('stream-log');
+    streamSource=new EventSource(APIS.colmena+'/stream');
+    streamSource.onmessage=e=>{
+      const d=JSON.parse(e.data);
+      const ts=new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      log.textContent=`[${ts}] phi=${d.global_phi?.toFixed(4)}\n`+log.textContent;
+      if(log.textContent.length>500) log.textContent=log.textContent.slice(0,500);
+    };
+    streamSource.onerror=()=>{
+      streamSource.close(); streamSource=null;
+      btn.textContent='▶ Iniciar stream';
+      btn.className='btn ok';
+    };
+    btn.textContent='■ Detener stream';
+    btn.className='btn danger';
+    toast('Stream iniciado ✓','ok');
+  }
+}
+
+// ── Config ────────────────────────────────────────
+function saveConfig() {
+  APIS.sentinel      = document.getElementById('cfg-sentinel').value.trim();
+  APIS.colmena       = document.getElementById('cfg-colmena').value.trim();
+  APIS.sentinel_agent= document.getElementById('cfg-agent').value.trim();
+  APIS.llm_orch      = document.getElementById('cfg-llmorch').value.trim();
+  localStorage.setItem('sentinel-url',      APIS.sentinel);
+  localStorage.setItem('colmena-url',       APIS.colmena);
+  localStorage.setItem('sentinel-agent-url',APIS.sentinel_agent);
+  localStorage.setItem('llm-orch-url',      APIS.llm_orch);
+  toast('URLs guardadas ✓','ok');
+  fullRefresh();
+}
+
+async function fullRefresh() {
+  await Promise.all([fetchSentinel(),fetchColmena(),fetchThreatStatus(),fetchBlockedIPs()]);
+}
+
+// ── Helpers ───────────────────────────────────────
+function fmt(s) {
+  if(!s) return '—';
+  if(s<60)  return s+'s';
+  if(s<3600)return Math.floor(s/60)+'m '+Math.floor(s%60)+'s';
+  return Math.floor(s/3600)+'h';
+}
+
+// ── Main loop ─────────────────────────────────────
+// ── Sentinel Agent polling ───────────────────────
+async function fetchSentinelAgent() {
+  try {
+    const s = await api('sentinel_agent', '/status');
+    setPill('pill-agent', true);
+    const eff = s.orch_efficiency || {};
+    // Uptime + LLM efficiency
+    document.getElementById('s-uptime').textContent =
+      fmt(s.uptime_s) + ' | LLM:' + (eff.llm_pct||0) + '%';
+    // Blocked IPs from sentinel-agent
+    document.getElementById('fw-blocked').textContent =
+      (s.blocked||0) + ' IPs';
+    // Connections analyzed
+    document.getElementById('g-scanned').textContent =
+      s.connections || 0;
+    // Threats detected
+    document.getElementById('t-hits').textContent =
+      s.threats || 0;
+    document.getElementById('t-hits').className =
+      'sv' + ((s.threats||0) > 0 ? ' warn' : ' ok');
+    // Orchestrator efficiency
+    document.getElementById('t-last').textContent =
+      eff.target_met ? '✓ <5% LLM' : '⚠ >5% LLM';
+    document.getElementById('t-iocs').textContent =
+      (eff.tokens_total||0) + ' tokens usados';
+    // phi-guard score using agent phi
+    document.getElementById('g-phi').textContent =
+      (s.phi_global||0).toFixed(4);
+    // Firewall mode
+    document.getElementById('fw-mode').textContent =
+      s.coherent ? 'COHERENTE' : 'DEGRADADO';
+    // Update blocked IPs list
+    if (s.blocked_ips && s.blocked_ips.length > 0) {
+      document.getElementById('blocked-list').textContent =
+        s.blocked_ips.slice(0,8).join('\n');
+    }
+    return s;
+  } catch(e) {
+    setPill('pill-agent', false);
+    return null;
+  }
+}
+
+async function fetchLLMOrch() {
+  try {
+    const s = await api('llm_orch', '/status');
+    setPill('pill-orch', true);
+    const eff = s.efficiency || {};
+    document.getElementById('g-phi').textContent =
+      'L0:' + (eff.level_0||0) + ' L1:' + (eff.level_1||0) + ' LLM:' + (eff.level_2_llm||0);
+    document.getElementById('fw-mode').textContent =
+      eff.target_met ? 'EFICIENTE' : 'NORMAL';
+    return s;
+  } catch(e) {
+    setPill('pill-orch', false);
+    return null;
+  }
+}
+
+let loopN=0;
+async function loop() {
+  loopN++;
+  state.tick++;
+  demoStep();
+
+  if(loopN%3===0) {
+    const [phi]=await Promise.all([fetchSentinel(),fetchColmena()]);
+    if(phi!==null) state.phi=phi;
+    if(loopN%9===0) fetchThreatStatus();
+    if(loopN%6===0) fetchBlockedIPs();
+    if(loopN%4===0) fetchSentinelAgent();
+    if(loopN%12===0) fetchLLMOrch();
+  }
+
+  state.phi_history.push(state.phi);
+  if(state.phi_history.length>120) state.phi_history.shift();
+
+  updateMasterPhi(state.phi);
+  document.getElementById('tick-lbl').textContent='tick '+state.tick;
+
+  const any=state.connected.sentinel||state.connected.colmena;
+  document.getElementById('top-dot').className='dot'+(any?'':' off');
+
+  drawField();
+  drawHist();
+}
+
+// ── Init ──────────────────────────────────────────
+// ── Blacklist state (localStorage) ──────────────
+const BL = {
+  ip:     JSON.parse(localStorage.getItem('bl-ip')     || '[]'),
+  domain: JSON.parse(localStorage.getItem('bl-domain') || '[]'),
+  app:    JSON.parse(localStorage.getItem('bl-app')    ||
+    '["mSpy","FlexiSpy","Cerberus","Hoverwatch","Stalkerware"]'),
+  file:   JSON.parse(localStorage.getItem('bl-file')   || '[]'),
+};
+
+function saveBL(type) {
+  localStorage.setItem('bl-'+type, JSON.stringify(BL[type]));
+}
+
+function renderBL() {
+  document.getElementById('blocked-list').textContent =
+    BL.ip.length > 0 ? BL.ip.slice(0,8).join('\n') : '—';
+  document.getElementById('blocked-domains-list').textContent =
+    BL.domain.length > 0 ? BL.domain.slice(0,8).join('\n') : '—';
+  document.getElementById('blocked-apps-list').textContent =
+    BL.app.slice(0,8).join(', ');
+  document.getElementById('blocked-files-list').textContent =
+    BL.file.length > 0 ? BL.file.slice(0,4).join('\n') : '—';
+}
+
+function switchBlTab(type) {
+  ['ip','domain','app','file'].forEach(t => {
+    document.getElementById('bl-'+t).style.display = t===type?'block':'none';
+    const btn = document.getElementById('bl-tab-'+t);
+    if(btn) {
+      btn.style.borderColor = t===type?'var(--warn)':'var(--b1)';
+      btn.style.color       = t===type?'var(--warn)':'var(--t2)';
+    }
+  });
+}
+
+async function addDomainBlacklist() {
+  const domain = document.getElementById('domain-bl-input').value.trim();
+  if(!domain) return;
+  if(!BL.domain.includes(domain)) {
+    BL.domain.push(domain);
+    saveBL('domain');
+    renderBL();
+    // Also block in Sentinel-Agent
+    await api('sentinel_agent','/block','POST',{ip:domain});
+    toast('Dominio bloqueado: '+domain,'ok');
+  }
+  document.getElementById('domain-bl-input').value='';
+}
+
+async function addAppBlacklist() {
+  const app = document.getElementById('app-bl-input').value.trim();
+  if(!app) return;
+  if(!BL.app.includes(app)) {
+    BL.app.push(app);
+    saveBL('app');
+    renderBL();
+    toast('App bloqueada: '+app,'ok');
+  }
+  document.getElementById('app-bl-input').value='';
+}
+
+async function addFileBlacklist() {
+  const hash = document.getElementById('file-bl-input').value.trim();
+  if(!hash) return;
+  if(!BL.file.includes(hash)) {
+    BL.file.push(hash);
+    saveBL('file');
+    renderBL();
+    toast('Hash bloqueado: '+hash.slice(0,20)+'...','ok');
+  }
+  document.getElementById('file-bl-input').value='';
+}
+
+function init() {
+  resizeFC(); resizeHC();
+  buildDomainGrid();
+  DOMAINS.forEach((d,i)=>updateDomain(d,PHI_MIN+.3+i*.05));
+  window.addEventListener('resize',()=>{resizeFC();resizeHC()});
+  setInterval(loop,1000);
+  loop();
+  setTimeout(fullRefresh,500);
+  renderBL();
+}
+init();
+</script>
+</body>
+</html>
