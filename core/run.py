@@ -31,7 +31,6 @@ import os as _os
 @app.route('/dashboard')
 def dashboard():
     """Sirve el dashboard desde el repo."""
-    # Buscar dashboard.html relativo a este archivo
     here = _os.path.dirname(_os.path.abspath(__file__))
     paths = [
         _os.path.join(here, '..', 'dashboard.html'),
@@ -39,14 +38,16 @@ def dashboard():
     ]
     for p in paths:
         if _os.path.exists(p):
-            # Patch localhost URL into HTML
             html = open(p, encoding='utf-8').read()
-            html = html.replace(
-                'sentinel-agent-production-0577.up.railway.app',
-                f'127.0.0.1:{PORT}'
-            )
+            # Solo parchear si estamos corriendo local (no en Railway)
+            is_railway = _os.environ.get('RAILWAY_ENVIRONMENT') or _os.environ.get('RAILWAY_PROJECT_ID')
+            if not is_railway:
+                html = html.replace(
+                    'sentinel-agent-production-0577.up.railway.app',
+                    f'127.0.0.1:{PORT}'
+                )
             return Response(html, mimetype='text/html')
-    return Response("<h1>Dashboard no encontrado</h1><p>Agregar dashboard.html al directorio raíz.</p>", mimetype='text/html')
+    return Response("<h1>Dashboard no encontrado</h1>", mimetype='text/html')
 
 if __name__ == "__main__":
     print(f"  Dashboard: http://127.0.0.1:{PORT}/dashboard")
