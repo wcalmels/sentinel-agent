@@ -118,9 +118,12 @@ if __name__ == "__main__":
     # Arrancar OS Firewall para bloqueo activo
     try:
         from os_firewall import OSFirewall, integrate_with_sentinel
+        # En Railway siempre simulado (sin acceso a iptables del host)
+        _is_railway = bool(_os.environ.get('RAILWAY_ENVIRONMENT') or
+                          _os.environ.get('RAILWAY_PROJECT_ID'))
         _firewall = OSFirewall(
-            persist = True,
-            dry_run = _os.environ.get('FIREWALL_DRY_RUN','0') == '1',
+            persist  = not _is_railway,
+            dry_run  = _is_railway or _os.environ.get('FIREWALL_DRY_RUN','0') == '1',
         )
         # Integrar con el agente — bloqueos reales desde ahora
         integrate_with_sentinel(agent, _firewall)

@@ -49,10 +49,11 @@ from typing import Dict, List, Optional, Set, Tuple
 
 try:
     import psutil
+    PSUTIL_OK = True
 except ImportError:
-    print("[NetworkCapture] psutil no encontrado. Instalar con:")
-    print("  pip install psutil")
-    sys.exit(1)
+    psutil = None
+    PSUTIL_OK = False
+    print("[NetworkCapture] psutil no disponible — captura desactivada")
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -130,7 +131,7 @@ class NetworkCapture:
         self._start      = time.time()
 
         # Historial de bytes por interfaz (para calcular bytes/s)
-        self._prev_io    = psutil.net_io_counters(pernic=True)
+        self._prev_io    = psutil.net_io_counters(pernic=True) if PSUTIL_OK else {}
         self._prev_ts    = time.time()
 
         # Cache de nombre de proceso por PID
@@ -167,6 +168,8 @@ class NetworkCapture:
 
     def _poll(self):
         """Una captura de todas las conexiones activas."""
+        if not PSUTIL_OK:
+            return
         try:
             connections = psutil.net_connections(kind='inet')
         except (psutil.AccessDenied, PermissionError):
@@ -294,6 +297,8 @@ class NetworkCapture:
             return 'unknown'
         if pid in self._proc_cache:
             return self._proc_cache[pid]
+        if not PSUTIL_OK:
+            return 'unknown'
         try:
             name = psutil.Process(pid).name()
             self._proc_cache[pid] = name
@@ -308,6 +313,8 @@ class NetworkCapture:
 
     def _calc_bytes_rate(self) -> float:
         """Calcula bytes/s total de todas las interfaces."""
+        if not PSUTIL_OK:
+            return 0.0
         try:
             now_io = psutil.net_io_counters()
             now_ts = time.time()
@@ -380,6 +387,8 @@ class NetworkCapture:
         Captura única síncrona — útil para debug.
         Retorna todas las conexiones activas en este momento.
         """
+        if not PSUTIL_OK:
+            return []
         try:
             connections = psutil.net_connections(kind='inet')
         except Exception:
